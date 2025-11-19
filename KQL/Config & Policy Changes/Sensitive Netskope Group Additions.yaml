@@ -1,0 +1,24 @@
+metadata:
+  name: "Sensitive Netskope Group Additions"
+  domain: "KQL"
+  author: "Liam Martin"
+  version: "1.0"
+  created_date: "25/09/25"
+  updated_date: "N/A"
+  severity: "Low"
+  description: "Checks for any new additions to the Netskope group that allows users to disable.
+    This group enables users to disable the Netskope client themselves, which often leads to
+    users disabling without justification. Additions to this groups are only approved in certain
+    circumstances, where all other routes have been exhausted. Additions to it should also be 
+    discussed with Security prior."
+
+rules:
+  - rule: AuditLogs
+      | where OperationName contains "Add member"
+      | where TargetResources contains "2471ea2a-45c7-4a4b-be7e-8e95da905607"
+      | extend Initiator = tostring(InitiatedBy.user.userPrincipalName)
+      | mv-expand TargetResources
+      | extend TargetDisplayName = tostring(TargetResources.userPrincipalName), TargetType = tostring(TargetResources.type)
+      | where TargetType == "User"
+      | project TimeGenerated, OperationName, Initiator, TargetDisplayName, TargetType, ActivityDisplayName
+      | take 10

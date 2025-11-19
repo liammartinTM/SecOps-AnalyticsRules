@@ -1,0 +1,18 @@
+metadata:
+  name: "Phishing Monitoring"
+  domain: "KQL"
+  author: "Liam Martin"
+  version: "1.0"
+  created_date: "19/11/25"
+  updated_date: "N/A"
+  severity: "Low"
+  description: "Simple check to alert on emails that are sent by determined TAs. This has been created
+    based on a number of similar attempts, so which were not picked up by MDO, all containing newly 
+    registered domains and containing a variation of 'pay' keyword and a '.trade' domain. Whilst
+    simple and reflecting of this threat, this rule can and should be expanded when further threats
+    of a similar nature are detected."
+
+rules:
+  - rule: EmailEvents
+    | where SenderFromDomain contains "pay" and SenderFromDomain contains ".trade"
+    | project TimeGenerated, DeliveryAction, DeliveryLocation, RecipientEmailAddress, SenderFromAddress, Subject

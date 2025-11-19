@@ -1,0 +1,38 @@
+metadata:
+  name: "New Internet Facing Asset Exposing Remote Service"
+  domain: "KQL"
+  author: "Ekco"
+  version: "1.0"
+  created_date: "01/01/25"
+  updated_date: "N/A"
+  severity: "Low"
+  description: "Checks for any internet facing asset that has a remote service, such as 
+    port 3389 (RDP) or 22 (SSH) exposed. This rule detects an attempt to connect via themselves
+    ports but does not dive into whether the asset is locked down, such as with NSG rules.
+    Triggers of this rule should be checked to see whether the asset is indeed open to the public.
+    This rule is not ideal and is due for an upgrade."
+
+rules:
+  - rule: let WhiteListedDevice = _GetWatchlist('InternetFacingAssetsExposedRemoteServices');
+      let KnownDevices = materialize(
+        DeviceInfo
+        | where TimeGenerated between (ago(14d) .. ago(1d))
+        | where IsInternetFacing == 1
+        | where AdditionalFields has_any ("3389", "22")
+        | extend parsedFields = parse_json(AdditionalFields)
+        | extend ExposedPort = parsedFields.InternetFacingLocalPort
+        | where tostring(ExposedPort) in ("3389", "22")
+        | distinct DeviceId, DeviceName
+      );
+      //
+      DeviceInfo
+      | where TimeGenerated between (ago(1d) .. now())
+      | where IsInternetFacing == 1
+      | where AdditionalFields has_any ("3389", "22")
+      | extend parsedFields = parse_json(AdditionalFields)
+      | extend ExposedPort = parsedFields.InternetFacingLocalPort
+      | where tostring(ExposedPort) in ("3389", "22")
+      | summarize Earliest = min(TimeGenerated), ExposedPorts = make_set(ExposedPort) by DeviceName, DeviceId
+      //
+      | join kind=leftanti KnownDevices on DeviceId, DeviceName
+      | join kind=leftanti WhiteListedDevice on DeviceName

@@ -1,0 +1,27 @@
+metadata:
+  name: "Break Glass Account Activity"
+  domain: "KQL"
+  author: "Liam Martin"
+  version: "1.0"
+  created_date: "01/10/25"
+  updated_date: "N/A"
+  severity: "Critical"
+  description: "Checks for any activity, including sign-in activity against any of the 2 
+    dedicated break glass accounts in Entra ID. These accounts have global admin and the
+    ability to elevate over the full Azure platform, making them the most sensitive accounts
+    in the business. Any activity on them should be authorised and for only required purposes.
+    This rule checks for any activity and any triggers should be taken seriously."
+
+rules:
+  - rule: let audit = AuditLogs
+      | where TimeGenerated >= ago(65m)
+      | where TargetResources has "tm.azure.backup" or TargetResources has "tm.azure.recovery"
+      | mv-expand TargetResources
+      | extend TargetResourceName = tostring(TargetResources.userPrincipalName), InitiatorUPN = tostring(InitiatedBy.user.userPrincipalName)
+      | project TimeGenerated, OperationName, Category, ActivityDisplayName, InitiatorUPN, TargetResourceName;
+      let signin = SigninLogs
+      | where TimeGenerated >= ago(65m)
+      | where UserPrincipalName == "tm.azure.backup@totalmobile.co.uk" or UserPrincipalName == "tm.azure.recovery@totalmobile.co.uk"
+      | project TimeGenerated, OperationName, Category, ResultSignature, Location, AppDisplayName, ConditionalAccessStatus, IPAddress;
+      union audit, signin
+      | sort by TimeGenerated desc

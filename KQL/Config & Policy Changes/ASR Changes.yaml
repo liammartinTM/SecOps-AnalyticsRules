@@ -1,0 +1,20 @@
+metadata:
+  name: "ASR Changes"
+  domain: "KQL"
+  author: "Liam Martin"
+  version: "1.0"
+  created_date: "07/10/25"
+  updated_date: "N/A"
+  severity: "Medium"
+  description: "Checks for changes to the Attack Surface Reduction rules in Intune against
+    corporate devices. CHanges to ASR should be protected by the Intune Admin role, however,
+    all changes to ASR should first be run passed the security team. Unauthorised changes
+    not permitted and any detected should be reverted before investigating why these were
+    pushed."
+
+rules:
+  - rule: IntuneAuditLogs
+      | extend PropertiesJson = parse_json(Properties)
+      | extend DisplayName = tostring(PropertiesJson.TargetDisplayNames[0])
+      | where DisplayName contains "ASR"
+      | project TimeGenerated, OperationName, Identity, DisplayName
